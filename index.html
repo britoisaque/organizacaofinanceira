@@ -26,15 +26,15 @@ button{background:linear-gradient(135deg,var(--pr),var(--pr2));color:var(--on);b
 button:hover{filter:brightness(1.08)}
 button.g{background:transparent;color:var(--tx);border:1px solid var(--bd)}
 button.x{background:transparent;color:var(--rd);width:auto;margin:0;padding:4px 8px}
-nav{display:flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow-x:auto;margin:14px 0 18px}
-nav button{flex:1;background:transparent;color:var(--mu);margin:0;width:auto;padding:9px 14px;white-space:nowrap}
-nav button.on{background:linear-gradient(135deg,var(--pr),var(--pr2));color:var(--on)}
+nav{position:relative;display:flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow-x:auto;margin:14px 0 18px}
+nav button{flex:1;background:transparent;color:var(--mu);margin:0;width:auto;padding:9px 14px;white-space:nowrap;position:relative;z-index:1;transition:color .25s}
+nav button.on{color:var(--on)}
 .g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:6px}.g3 .card{margin:0}
 .hero{background:linear-gradient(135deg,var(--pr),var(--pr2));color:var(--on);border:0}.hero h3{color:inherit;opacity:.8}
 .k{font-size:1.5rem;font-weight:700;letter-spacing:-.02em}.pos{color:var(--ok)}.neg{color:var(--rd)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
 .row:last-child{border:0}.mu{color:var(--mu);font-size:.85rem}
-.mn{display:flex;align-items:center;gap:8px;margin-bottom:14px}.mn button{width:44px;margin:0}.mn b{flex:1;text-align:center;text-transform:capitalize;font-size:1.05rem}
+.mn{display:flex;align-items:center;gap:8px;margin-bottom:14px}.mn button{width:44px;margin:0}.mn b{flex:1;text-align:center;font-size:1.05rem}.mn b::first-letter{text-transform:uppercase}
 .err{color:var(--rd);font-size:.9rem;margin-top:8px}
 .cv{position:relative;height:270px}
 .au{max-width:420px;margin:5vh auto}
@@ -56,6 +56,10 @@ nav button.on{background:linear-gradient(135deg,var(--pr),var(--pr2));color:var(
 .pw{position:relative}.pw input{padding-right:48px}
 .pw .eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:36px;height:36px;margin:0;padding:0;background:transparent;color:var(--mu);display:grid;place-items:center;border-radius:10px}
 .pw .eye:hover{color:var(--tx);filter:none}
+@keyframes pgin{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.in{animation:pgin .45s cubic-bezier(.2,.7,.2,1) both}
+nav .ind{position:absolute;top:4px;bottom:4px;left:calc(4px + var(--i,0) * ((100% - 16px) / 3 + 4px));width:calc((100% - 16px) / 3);border-radius:10px;background:linear-gradient(135deg,var(--pr),var(--pr2));transition:left .38s cubic-bezier(.4,0,.2,1)}
+@media(prefers-reduced-motion:reduce){.in{animation:none}nav .ind{transition:none}}
 </style></head><body><div class="w" id="app"></div>
 <script>
 // 1) Cole aqui os dados do seu projeto Supabase (Project Settings > API). A chave anon e publica; a seguranca vem das regras RLS do schema.sql
@@ -71,7 +75,7 @@ let me=null,U={},D=null,mode='login',tab='resumo',month=new Date().toISOString()
 const idx=m=>{const[y,o]=m.split('-');return +y*12+ +o-1};
 const addM=(m,n)=>{const i=idx(m)+n;return Math.floor(i/12)+'-'+String(i%12+1).padStart(2,'0')};
 const lbl=m=>{const[y,o]=m.split('-');return new Date(+y,+o-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})};
-let info='',uid=null,rec=false,showCk=false;
+let info='',uid=null,rec=false,showCk=false,shown=null,pi=0;const TB=['resumo','mes','cfg'];
 const sbc=window.supabase&&SUPABASE_URL.startsWith('https://')?supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 async function setSess(ses){
   if(!ses){me=null;D=null;uid=null;return}
@@ -107,16 +111,16 @@ const sal=()=>(+D.s1||0)+(D.on?+D.s2||0:0);
 function tot(m){const it=items(m),s=t=>it.filter(i=>i.t===t).reduce((a,i)=>a+ +i.v,0);
   const o={fixo:s('fixo'),variavel:s('variavel'),parcela:s('parcela'),fin:s('fin')};
   o.in=sal()+s('entrada');o.out=o.fixo+o.variavel+o.parcela+o.fin;o.bal=o.in-o.out;return o}
-function nav(){return `<h1>Olá, ${esc(U[me].name.split(' ')[0])}</h1><p class="mu">Seu painel financeiro</p><nav>${[['resumo','Resumo'],['mes','Mês a mês'],['cfg','Configurações']].map(([k,n])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';draw()">${n}</button>`).join('')}</nav>`}
+function nav(){return `<h1>Olá, ${esc(U[me].name.split(' ')[0])}</h1><p class="mu">Seu painel financeiro</p><nav><i class="ind" style="--i:${pi}"></i>${[['resumo','Resumo'],['mes','Mês a mês'],['cfg','Configurações']].map(([k,n])=>`<button class="${tab===k?'on':''}" onclick="tab='${k}';draw()">${n}</button>`).join('')}</nav>`}
 const mn=()=>`<div class="mn"><button class="g" onclick="month=addM(month,-1);draw()">‹</button><b>${lbl(month)}</b><button class="g" onclick="month=addM(month,1);draw()">›</button></div>`;
 function draw(){
   charts.forEach(c=>c.destroy());charts=[];const a=$('#app');
-  if(rec||!me){a.innerHTML=land();return}
-  let h=nav();
+  if(rec||!me){shown=null;a.innerHTML=land();return}
+  const ni=TB.indexOf(tab),an=shown!==tab;if(shown===null)pi=ni;let h=nav();
   if(tab==='resumo'){const t=tot(month);
     h+=mn()+`<div class="g3"><div class="card"><h3>Renda</h3><div class="k pos">${R(t.in)}</div></div><div class="card"><h3>Gastos</h3><div class="k neg">${R(t.out)}</div></div><div class="card hero"><h3>Saldo</h3><div class="k">${R(t.bal)}</div></div></div>
     ${D.on&&D.s2?`<p class="mu">Renda conjunta: ${esc(D.n1||'Pessoa 1')} ${R(D.s1)} + ${esc(D.n2||'Pessoa 2')} ${R(D.s2)}</p>`:''}
-    <p class="mu">${t.in?Math.round(t.out/t.in*100)+'% da renda comprometida neste mês.':'Cadastre sua renda em Configuração.'}</p>
+    <p class="mu">${t.in?Math.round(t.out/t.in*100)+'% da renda comprometida neste mês.':'Cadastre sua renda em Configurações.'}</p>
     <div class="card"><h2>Para onde vai o dinheiro</h2><div class="cv"><canvas id="c1"></canvas></div></div>
     <div class="card"><h2>Últimos 6 meses</h2><div class="cv"><canvas id="c2"></canvas></div></div>`;
   }else if(tab==='mes'){
@@ -137,7 +141,7 @@ function draw(){
     <p class="k pos">Renda total: ${R(sal())}</p><button onclick="sv(true)">Salvar salários</button></div>
     <div class="card"><h2>Aparência</h2><div class="g3"><button class="${cur()==='light'?'':'g'}" onclick="theme('light')">Modo claro</button><button class="${cur()==='dark'?'':'g'}" onclick="theme('dark')">Modo escuro</button></div></div>
     <div class="card"><h2>Conta</h2><button class="g" onclick="logout()">Sair</button><button class="g" onclick="clearAll()">Apagar meus lançamentos</button><button class="g" onclick="cookies(1)">Política de cookies</button></div>`;}
-  a.innerHTML=h+foot();if(tab==='mes')tg();if(tab==='resumo')ch();
+  a.innerHTML=h+foot();anim(an,ni);if(tab==='mes')tg();if(tab==='resumo')ch();
 }
 function tg(){const t=$('#t').value,p=t==='parcela'||t==='fin';$('#ft').style.display=t==='fin'?'block':'none';$('#fn').style.display=p?'block':'none';$('#vl').textContent=p?'Valor da parcela (R$)':'Valor (R$)'}
 async function add(){const t=$('#t').value,d=$('#d').value.trim(),v=parseFloat($('#v').value);
@@ -155,6 +159,10 @@ async function init(){
   if(/type=recovery/.test(location.hash)){rec=true;mode='reset'}
   const{data}=await sbc.auth.getSession();await setSess(data.session);draw();
 }
+function anim(an,ni){
+  const ind=$('nav .ind');if(ind){ind.style.setProperty('--i',pi);requestAnimationFrame(()=>requestAnimationFrame(()=>ind.style.setProperty('--i',ni)))}
+  if(an){let e=$('nav'),i=0;while((e=e.nextElementSibling)&&!/\b(ft|ckb|mod)\b/.test(e.className)){e.classList.add('in');e.style.animationDelay=(i++*45)+'ms'}}
+  pi=ni;shown=tab;}
 const go=m=>{mode=m;err='';info='';draw()};
 async function forgot(){const email=$('#em').value.trim().toLowerCase();err='';info='';
   if(!/^\S+@\S+\.\S+$/.test(email))err='Informe um e-mail válido.';
